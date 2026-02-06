@@ -1,0 +1,46 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ecommerce-gateway
+  annotations:
+    # Esta anotação é específica do NGINX Controller.
+    # Ela serve para "limpar" a URL.
+    # Se o utilizador aceder a /api/catalogo/lista, o serviço recebe apenas /lista
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx # Força o uso do Nginx (importante em versões novas do K8s)
+  rules:
+  - http:
+      paths:
+      # ----------------------------------------
+      # ROTA 1: Catálogo
+      # ----------------------------------------
+      - path: /api/catalogo(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: catalogo-service # Nome do teu Service K8s
+            port:
+              number: 3000 # Porta interna do serviço
+
+      # ----------------------------------------
+      # ROTA 2: Pedidos
+      # ----------------------------------------
+      - path: /api/pedidos(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: pedidos-service
+            port:
+              number: 3000
+
+      # ----------------------------------------
+      # ROTA 3: Clientes
+      # ----------------------------------------
+      - path: /api/clientes(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: clientes-service
+            port:
+              number: 3000

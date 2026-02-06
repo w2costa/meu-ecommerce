@@ -1,0 +1,280 @@
+# ==========================================
+# 1. DOMÍNIO: CATÁLOGO (App + MongoDB)
+# ==========================================
+
+# --- Banco de Dados: MongoDB ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db-catalogo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db-catalogo
+  template:
+    metadata:
+      labels:
+        app: db-catalogo
+    spec:
+      containers:
+      - name: mongo
+        image: mongo:latest
+        ports:
+        - containerPort: 27017
+        volumeMounts:
+        - name: mongo-storage
+          mountPath: /data/db
+      volumes:
+      - name: mongo-storage
+        emptyDir: {} # Para produção real, usarias PersistentVolumeClaim
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-catalogo # O nome que a app usa para conectar
+spec:
+  ports:
+  - port: 27017
+  selector:
+    app: db-catalogo
+
+# --- Aplicação: Catálogo Node.js ---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-catalogo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: catalogo
+  template:
+    metadata:
+      labels:
+        app: catalogo
+    spec:
+      containers:
+      - name: catalogo-container
+        image: img-catalogo:latest # A tua imagem construída
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3000
+        env:
+        - name: DB_URI
+          value: "mongodb://db-catalogo:27017/catalogo"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalogo-service # Nome para comunicação interna
+spec:
+  # type: LoadBalancer # Permite acesso de fora (ex: localhost)
+  ports:
+    - port: 3000
+    # - protocol: TCP
+    #   port: 3000
+    #   targetPort: 3000
+  selector:
+    app: catalogo
+
+# ==========================================
+# 2. DOMÍNIO: PEDIDOS (App + PostgreSQL)
+# ==========================================
+
+# --- Banco de Dados: PostgreSQL ---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db-pedidos
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db-pedidos
+  template:
+    metadata:
+      labels:
+        app: db-pedidos
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:13-alpine
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_USER
+          value: "admin"
+        - name: POSTGRES_DB
+          value: "pedidos_db"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: segredos-db
+              key: postgres-pass
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: postgres-storage
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-pedidos
+spec:
+  type: LoadBalancer # Permite acesso de fora (ex: localhost)
+  ports:
+  - port: 5432
+  selector:
+    app: db-pedidos
+
+# --- Aplicação: Pedidos Node.js ---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-pedidos
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pedidos
+  template:
+    metadata:
+      labels:
+        app: pedidos
+    spec:
+      containers:
+      - name: pedidos-container
+        image: img-pedidos:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3000
+        env:
+        - name: DB_HOST
+          value: "db-pedidos"
+        - name: DB_USER
+          value: "admin"
+        - name: DB_PASS
+          valueFrom:
+            secretKeyRef:
+              name: segredos-db
+              key: postgres-pass
+        # Aqui está a magia: Comunicação entre microsserviços via DNS do K8s
+        - name: PRODUCT_SERVICE_URL
+          value: "http://catalogo-service:3000/produtos"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pedidos-service
+spec:
+  # type: LoadBalancer # Permite acesso de fora (ex: localhost)
+  ports:
+    - port: 3000
+    # - protocol: TCP
+    #   port: 3001
+    #   targetPort: 3000
+  selector:
+    app: pedidos
+
+# ==========================================
+# 3. DOMÍNIO: CLIENTES (App + MySQL)
+# ==========================================
+
+# --- Banco de Dados: MySQL ---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db-clientes
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db-clientes
+  template:
+    metadata:
+      labels:
+        app: db-clientes
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:5.7
+        ports:
+        - containerPort: 3306
+        env:
+        - name: MYSQL_DATABASE
+          value: "clientes_db"
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: segredos-db
+              key: mysql-pass
+        volumeMounts:
+        - name: mysql-storage
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: mysql-storage
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-clientes
+spec:
+  ports:
+  - port: 3306
+  selector:
+    app: db-clientes
+
+# --- Aplicação: Clientes Node.js ---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-clientes
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: clientes
+  template:
+    metadata:
+      labels:
+        app: clientes
+    spec:
+      containers:
+      - name: clientes-container
+        image: img-clientes:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3000
+        env:
+        - name: DB_HOST
+          value: "db-clientes"
+        - name: DB_USER
+          value: "root"
+        - name: DB_PASS
+          valueFrom:
+            secretKeyRef:
+              name: segredos-db
+              key: mysql-pass
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clientes-service
+spec:
+  # type: LoadBalancer # Permite acesso de fora (ex: localhost)
+  ports:
+    - port: 3000
+    # - protocol: TCP
+    #   port: 3002
+    #   targetPort: 3000
+  selector:
+    app: clientes

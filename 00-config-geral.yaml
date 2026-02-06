@@ -1,0 +1,10 @@
+# 00-config-geral.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: segredos-db
+type: Opaque
+stringData:
+  # Aqui guardamos as passwords centralizadas (Codificadas em Base64 internamente pelo K8s)
+  postgres-pass: "segredo"
+  mysql-pass: "segredo"
