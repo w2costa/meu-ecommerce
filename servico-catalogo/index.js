@@ -36,6 +36,12 @@ app.get('/produtos/:id', async (req, res) => {
     }
 });
 
+// Adicionar ao index.js de Pedidos, Catálogo e Clientes
+app.get('/health', (req, res) => {
+    // Aqui poderias verificar se a conexão ao DB está ativa
+    res.status(200).send('OK');
+});
+
 // Iniciar o servidor e popular dados de teste
 app.listen(PORT, async () => {
     console.log(`Serviço de Catálogo rodando na porta ${PORT}`);

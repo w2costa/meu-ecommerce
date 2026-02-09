@@ -50,6 +50,12 @@ app.post('/clientes', async (req, res) => {
     res.json({ mensagem: 'Cliente cadastrado' });
 });
 
+// Adicionar ao index.js de Pedidos, Catálogo e Clientes
+app.get('/health', (req, res) => {
+    // Aqui poderias verificar se a conexão ao DB está ativa
+    res.status(200).send('OK');
+});
+
 app.listen(PORT, () => {
     console.log(`Serviço de Clientes rodando na porta ${PORT}`);
 });

@@ -66,6 +66,26 @@ app.get('/pedidos', async (req, res) => {
     res.json(resultado.rows);
 });
 
+// Adicionar ao index.js de Pedidos, Catálogo e Clientes
+app.get('/health', (req, res) => {
+    // Aqui poderias verificar se a conexão ao DB está ativa
+    res.status(200).send('OK');
+});
+
+// Rota da Morte: Simula um travamento da CPU
+app.get('/travado', (req, res) => {
+    console.log('Recebi pedido para travar. Bloqueando o Event Loop por 15s...');
+    
+    const stop = Date.now() + 15000; // 15 segundos no futuro
+    
+    // Loop Síncrono: O Node.js não consegue fazer MAIS NADA enquanto isto roda
+    while (Date.now() < stop) {
+        // CPU a 100%, loop vazio
+    }
+    
+    res.send('Desbloqueado (se ainda estiver vivo)!');
+});
+
 app.listen(PORT, () => {
     console.log(`Serviço de Pedidos rodando na porta ${PORT}`);
 });
