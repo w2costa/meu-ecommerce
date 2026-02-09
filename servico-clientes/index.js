@@ -50,10 +50,21 @@ app.post('/clientes', async (req, res) => {
     res.json({ mensagem: 'Cliente cadastrado' });
 });
 
-// Adicionar ao index.js de Pedidos, Catálogo e Clientes
-app.get('/health', (req, res) => {
-    // Aqui poderias verificar se a conexão ao DB está ativa
-    res.status(200).send('OK');
+// NOVA ROTA DE HEALTH CHECK (Teste Real)
+app.get('/health', async (req, res) => {
+    if (!db) return res.status(500).json({ erro: 'Banco não conectado ainda' });
+    try {
+        // O comando 'SELECT 1' é o padrão da indústria para "ping" em SQL.
+        // É super rápido e não consome recursos.
+        await db.execute('SELECT 1');
+        
+        // Se chegou aqui, o banco está vivo
+        res.status(200).send('OK - Banco Conectado');
+    } catch (error) {
+        // Se caiu no catch, o banco está inacessível
+        console.error('Health Check Falhou:', error.message);
+        res.status(500).send('ERRO - Banco Indisponível');
+    }
 });
 
 app.listen(PORT, () => {

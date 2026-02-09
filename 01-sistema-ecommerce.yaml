@@ -277,6 +277,29 @@ spec:
         imagePullPolicy: Never
         ports:
         - containerPort: 3000
+
+        # --- ADICIONAR ESTE BLOCO ---
+        
+        # 1. Readiness: "Espera eu ligar o banco antes de mandar clientes"
+        readinessProbe:
+          httpGet:
+            path: /health # Endpoint de saúde que criamos no index.js
+            port: 3000
+          initialDelaySeconds: 10 # Dá 10s de folga para o Node arrancar
+          periodSeconds: 5        # Verifica a cada 5s
+          failureThreshold: 3     # Se falhar 3x, marca como "Não Pronto"
+
+        # 2. Liveness: "Se eu travar, reinicia-me"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 15 # Espera mais um pouco antes de começar a matar
+          periodSeconds: 10       # Verifica a cada 10s
+          timeoutSeconds: 5       # Se demorar mais de 5s a responder, conta falha
+        
+        # ----------------------------
+
         env:
         - name: DB_HOST
           value: "db-clientes"
