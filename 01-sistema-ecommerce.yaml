@@ -278,27 +278,30 @@ spec:
         ports:
         - containerPort: 3000
 
-        # --- ADICIONAR ESTE BLOCO ---
+        # --- ATUALIZAÇÃO DAS SONDAS ---
         
-        # 1. Readiness: "Espera eu ligar o banco antes de mandar clientes"
+        # READINESS: Verifica se o Banco responde.
+        # Se falhar, o K8s remove este pod do Load Balancer (para de enviar tráfego).
         readinessProbe:
           httpGet:
-            path: /health # Endpoint de saúde que criamos no index.js
+            path: /health
             port: 3000
-          initialDelaySeconds: 10 # Dá 10s de folga para o Node arrancar
-          periodSeconds: 5        # Verifica a cada 5s
-          failureThreshold: 3     # Se falhar 3x, marca como "Não Pronto"
+          initialDelaySeconds: 5
+          periodSeconds: 5     # Testa a cada 5 segundos
+          failureThreshold: 2  # Falha 2x = "Não Estou Pronto"
 
-        # 2. Liveness: "Se eu travar, reinicia-me"
+        # LIVENESS: Verifica apenas se o Node.js não travou.
+        # Usa a mesma rota, mas como o erro 500 reiniciaria o pod, 
+        # idealmente terias uma rota separada '/alive' que retorna sempre 200.
+        # PARA ESTE TESTE: Vamos usar o mesmo. Se o banco ficar fora muito tempo, ele VAI reiniciar.
         livenessProbe:
           httpGet:
             path: /health
             port: 3000
-          initialDelaySeconds: 15 # Espera mais um pouco antes de começar a matar
-          periodSeconds: 10       # Verifica a cada 10s
-          timeoutSeconds: 5       # Se demorar mais de 5s a responder, conta falha
-        
-        # ----------------------------
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 3
+        # ------------------------------
 
         env:
         - name: DB_HOST

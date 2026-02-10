@@ -66,17 +66,17 @@ app.get('/pedidos', async (req, res) => {
     res.json(resultado.rows);
 });
 
-// NOVA ROTA DE HEALTH CHECK (Teste Real)
+// --- NOVO HEALTH CHECK (Teste de Conexão Real) ---
 app.get('/health', async (req, res) => {
     try {
-        // O comando 'SELECT 1' é o padrão da indústria para "ping" em SQL.
-        // É super rápido e não consome recursos.
+        // Tenta fazer uma query simples e rápida
         await pool.query('SELECT 1');
         
-        // Se chegou aqui, o banco está vivo
+        // Se não deu erro, o banco está vivo e a responder
         res.status(200).send('OK - Banco Conectado');
     } catch (error) {
-        // Se caiu no catch, o banco está inacessível
+        // Se caiu aqui, o banco está em baixo, senha errada ou rede cortada.
+        // O Kubernetes receberá erro 500 e saberá que algo está errado.
         console.error('Health Check Falhou:', error.message);
         res.status(500).send('ERRO - Banco Indisponível');
     }
